@@ -104,8 +104,12 @@ ForEach ($PSTNGateway in $PSTNGateways) {
 				$a = $i + 1
 				Write-Host ($a, $TeamsPSTNGW[$i]) -Separator '     '
 			}
-			$a = $a + 1 
-			Write-Host ($a, "Create a PSTN gateway called $PSTNGateway") -Separator '     '
+			
+			If ($PSTNGateway -match "[A-Za-z]") { # If there are no letters in the gateway name, its not going to be a valid FQDN (likely an IP address), so don't offer to create a Teams GW with that name
+				$a = $a + 1 
+				Write-Host ($a, "Create a PSTN gateway called $PSTNGateway") -Separator '     '
+			}
+			
 			$a = $a + 1 
 			Write-Host ($a, 'Create a new PSTN gateway') -Separator '     '
 			$a = $a + 1 
@@ -231,7 +235,7 @@ ForEach ($VoiceRoute in $VoiceRoutes) {
 	$TeamsGatewayList = @()
 	$SfBGatewayList = $VoiceRoute.PstnGatewayList
 	ForEach ($SfBGateway in $SfBGatewayList) {
-		$TeamsGateway = $PSTNGWMatch[[regex]::Match($SfBGateway, 'PstnGateway:(.*)').Groups[1].Value]
+		$TeamsGateway = $PSTNGWMatch[[regex]::Match($SfBGateway, 'PstnGateway:(.*)').Groups[1].Value] # Strip the PstnGateway from the gateway name
 		If ($TeamsGateway) {
 			$TeamsGatewayList += $TeamsGateway
 		}
@@ -279,74 +283,46 @@ ForEach ($VoicePolicy in $VoicePolicies) {
 	}
 }
 
-# Create Teams translation rules from SfB equivalents and assign to gateways
-Write-Host -Object 'Copying SfB outbound calling translation rules to Teams translation rules'
 
-ForEach ($OutboundCallingTransRule in $OutboundCallingTransRules) {
-	Write-Verbose "Copying $($OutboundCallingTransRule.Identity) outbound calling translation rule"
-	$OCTRExists = (Get-CsTeamsTranslationRule -Identity $OutboundCallingTransRule.Name -ErrorAction SilentlyContinue).Identity
+# Create variable to hold variable names: Entry1=variable name, Entry2=text, Entry3=parameter name
+$TransRuleVars = @(('OutboundCallingTransRules', 'calling', 'OutbundTeamsNumberTranslationRules'), ('OutboundCalledTransRules', 'called', 'OutboundPSTNNumberTranslationRules'))
 
-	$OCTRDetails = @{
-		Identity = $OutboundCallingTransRule.Name
-		Pattern = $OutboundCallingTransRule.Pattern
-		Translation = $OutboundCallingTransRule.Translation
-		Description = $OutboundCallingTransRule.Description
-	}
-	
-	$SfBGateway = [regex]::Match($OutboundCallingTransRule.Identity, 'PstnGateway:(.*)/').Groups[1].Value
-	$TeamsGateway = $PSTNGWMatch[$SfbGateway]
-	
-	If ($OCTRExists) {
-		If (Get-CsTeamsTranslationRule -Identity $OutboundCallingTransRule.Name | Where {$_.Pattern -eq $OutboundCallingTransRule.Pattern -and $_.Translation -eq $OutboundCallingTransRule.Translation}) {
-			Write-Verbose "Matching existing rule: $($OutboundCallingTransRule.Name)"
+ForEach ($TransRuleVar in $TransRuleVars) {
+	# Create Teams translation rules from SfB equivalents and assign to gateways
+	Write-Host -Object "Copying SfB outbound $($TransRuleVar[1]) translation rules to Teams translation rules"
+
+	ForEach ($TeamsTransRule in (Get-Variable -Name $TransRuleVar[0] -ValueOnly)) {
+		Write-Verbose "Copying $($TeamsTransRule.Identity) outbound $($TransRuleVar[1]) translation rule"
+		$OCTRExists = (Get-CsTeamsTranslationRule -Identity $TeamsTransRule.Name -ErrorAction SilentlyContinue).Identity
+
+		$OCTRDetails = @{
+			Identity = $TeamsTransRule.Name
+			Pattern = $TeamsTransRule.Pattern
+			Translation = $TeamsTransRule.Translation
+			Description = $TeamsTransRule.Description
 		}
-		Else { # Rulename is the same, but the translation or pattern is different, so need a new rule
-			Write-Verbose "$($OutboundCallingTransRule.Name) rule has same name, but different details. Creating new rule: $($OutboundCallingTransRule.Name)_$TeamsGateway"
-			$OCTRDetails.Identity = $OutboundCallingTransRule.Name + '_' + $TeamsGateway
+		
+		$SfBGateway = [regex]::Match($TeamsTransRule.Identity, 'PstnGateway:(.*)/').Groups[1].Value
+		$TeamsGateway = $PSTNGWMatch[$SfbGateway]
+		
+		If ($OCTRExists) {
+			If (Get-CsTeamsTranslationRule -Identity $TeamsTransRule.Name | Where {$_.Pattern -eq $TeamsTransRule.Pattern -and $_.Translation -eq $TeamsTransRule.Translation}) {
+				Write-Verbose "Matching existing rule: $($TeamsTransRule.Name)"
+			}
+			Else { # Rulename is the same, but the translation or pattern is different, so need a new rule
+				Write-Verbose "$($TeamsTransRule.Name) rule has same name, but different details. Creating new rule: $($TeamsTransRule.Name)_$TeamsGateway"
+				$OCTRDetails.Identity = $TeamsTransRule.Name + '_' + $TeamsGateway
+				$null = (New-CsTeamsTranslationRule @OCTRDetails)
+			}
+		}
+		Else {
+			Write-Verbose "Creating translation rule called $($TeamsTransRule.Name)"
 			$null = (New-CsTeamsTranslationRule @OCTRDetails)
 		}
+		
+		$Params = @{$TransRuleVar[2] = @{Add=$OCTRDetails.Identity}}
+		Write-Verbose "Assigning $($TeamsTransRule.Name) translation rule to gateway"
+		Set-CsOnlinePSTNGateway -Identity $TeamsGateway @Params 
 	}
-	Else {
-		Write-Verbose "Creating translation rule called $($OutboundCallingTransRule.Name)"
-		$null = (New-CsTeamsTranslationRule @OCTRDetails)
-	}
-	Write-Verbose "Assigning $($OutboundCallingTransRule.Name) translation rule to gateway"
-	Set-CsOnlinePSTNGateway -Identity $TeamsGateway -OutbundTeamsNumberTranslationRules @{Add=$OCTRDetails.Identity} -verbose
 }
-
-
-Write-Host -Object 'Copying SfB outbound caller translation rules to Teams translation rules'
-
-ForEach ($OutboundCalledTransRule in $OutboundCalledTransRules) {
-	Write-Verbose "Copying $($OutboundCalledTransRule.Identity) outbound called translation rule"
-	$OCTRExists = (Get-CsTeamsTranslationRule -Identity $OutboundCalledTransRule.Name -ErrorAction SilentlyContinue).Identity
-
-	$OCTRDetails = @{
-		Identity = $OutboundCalledTransRule.Name
-		Pattern = $OutboundCalledTransRule.Pattern
-		Translation = $OutboundCalledTransRule.Translation
-		Description = $OutboundCalledTransRule.Description
-	}
-	
-	$SfBGateway = [regex]::Match($OutboundCalledTransRule.Identity, 'PstnGateway:(.*)/').Groups[1].Value
-	$TeamsGateway = $PSTNGWMatch[$SfbGateway]
-	
-	If ($OCTRExists) {
-		If (Get-CsTeamsTranslationRule -Identity $OutboundCalledTransRule.Name | Where {$_.Pattern -eq $OutboundCalledTransRule.Pattern -and $_.Translation -eq $OutboundCalledTransRule.Translation}) {
-			Write-Host "Matching existing rule: $($OutboundCalledTransRule.Name)"
-		}
-		Else { # Rulename is the same, but the translation or pattern is different, so need a new rule
-			Write-Host "$($OutboundCalledTransRule.Name) rule has same name, but different details. Creating new rule: $($OutboundCalledTransRule.Name)_$TeamsGateway"
-			$OCTRDetails.Identity = $OutboundCalledTransRule.Name + '_' + $TeamsGateway
-			$null = (New-CsTeamsTranslationRule @OCTRDetails)
-		}
-	}
-	Else {
-		Write-Host "Creating translation rule called $($OutboundCalledTransRule.Name)"
-		$null = (New-CsTeamsTranslationRule @OCTRDetails)
-	}
-	Write-Verbose "Assigning $($OutboundCalledTransRule.Name) translation rule to gateway"
-	Set-CsOnlinePSTNGateway -Identity $TeamsGateway -OutboundPSTNNumberTranslationRules @{Add=$OCTRDetails.Identity} -verbose
-}
-
 Write-Host -Object 'Finished!'
