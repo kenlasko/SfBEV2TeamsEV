@@ -94,7 +94,7 @@ ForEach ($PSTNGateway in $PSTNGateways) {
 			Write-Host
 			Write-Host 'Could not find a matching PSTN gateway for ' -NoNewLine
 			Write-Host $PSTNGateway -ForegroundColor Yellow -NoNewLine
-			Write-Host '. Please select an existing PSTN gateway from the below list, or opt to create one:'
+			Write-Host '. Please select an existing Teams PSTN gateway from the below list, or opt to create one:'
 			$TeamsPSTNGWList = @()
 			Write-Host
 			Write-Host '#     Teams PSTN Gateway'
