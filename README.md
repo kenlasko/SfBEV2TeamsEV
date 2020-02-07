@@ -20,7 +20,7 @@ By default, the script will clean out any existing Teams EV config, including di
 
 ## More Information
 
-Check my blog post for more details about this script: https://ucken.blogspot.com/2020/02/copy-sfb-ev-to-teams-ev.html
+Check my blog post for more details about this script: https://ucken.blogspot.com/2020/02/migrate-sfb-ev-to-teams.html
 
 ## Authors
 
