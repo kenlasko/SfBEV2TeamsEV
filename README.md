@@ -18,6 +18,10 @@ Simply run **.\Copy-SfBEV2TeamsEV.ps1** from a PowerShell prompt on a Skype for 
 
 By default, the script will clean out any existing Teams EV config, including dialplans, voice routes, voice routing policies, PSTN usages and translation rules. You can override this behaviour by using the **-KeepExisting** switch.
 
+## More Information
+
+Check my blog post for more details about this script: https://ucken.blogspot.com/2020/02/copy-sfb-ev-to-teams-ev.html
+
 ## Authors
 
 **Ken Lasko** 
