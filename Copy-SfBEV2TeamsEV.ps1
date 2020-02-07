@@ -94,7 +94,8 @@ ForEach ($PSTNGateway in $PSTNGateways) {
 			Write-Host
 			Write-Host 'Could not find a matching PSTN gateway for ' -NoNewLine
 			Write-Host $PSTNGateway -ForegroundColor Yellow -NoNewLine
-			Write-Host '. Please select an existing Teams PSTN gateway from the below list, or opt to create one:'
+			Write-Host '.'
+			Write-Host 'Please select an existing Teams PSTN gateway from the below list, or opt to create one:'
 			$TeamsPSTNGWList = @()
 			Write-Host
 			Write-Host '#     Teams PSTN Gateway'
@@ -297,19 +298,19 @@ ForEach ($OutboundCallingTransRule in $OutboundCallingTransRules) {
 	
 	If ($OCTRExists) {
 		If (Get-CsTeamsTranslationRule -Identity $OutboundCallingTransRule.Name | Where {$_.Pattern -eq $OutboundCallingTransRule.Pattern -and $_.Translation -eq $OutboundCallingTransRule.Translation}) {
-			Write-Verbose 'Matching existing rule'
+			Write-Verbose "Matching existing rule: $($OutboundCallingTransRule.Name)"
 		}
 		Else { # Rulename is the same, but the translation or pattern is different, so need a new rule
-			Write-Verbose 'Rule has same name, but different details. Creating new rule.'
+			Write-Verbose "$($OutboundCallingTransRule.Name) rule has same name, but different details. Creating new rule: $($OutboundCallingTransRule.Name)_$TeamsGateway"
 			$OCTRDetails.Identity = $OutboundCallingTransRule.Name + '_' + $TeamsGateway
 			$null = (New-CsTeamsTranslationRule @OCTRDetails)
 		}
 	}
 	Else {
-		Write-Verbose 'Creating new translation rule'
+		Write-Verbose "Creating translation rule called $($OutboundCallingTransRule.Name)"
 		$null = (New-CsTeamsTranslationRule @OCTRDetails)
 	}
-	Write-Verbose 'Assigning translation rule to gateway'
+	Write-Verbose "Assigning $($OutboundCallingTransRule.Name) translation rule to gateway"
 	Set-CsOnlinePSTNGateway -Identity $TeamsGateway -OutbundTeamsNumberTranslationRules @{Add=$OCTRDetails.Identity} -verbose
 }
 
@@ -335,16 +336,16 @@ ForEach ($OutboundCalledTransRule in $OutboundCalledTransRules) {
 			Write-Host "Matching existing rule: $($OutboundCalledTransRule.Name)"
 		}
 		Else { # Rulename is the same, but the translation or pattern is different, so need a new rule
-			Write-Host "$($OutboundCalledTransRule.Name) rule has same name, but different details. Creating new rule."
+			Write-Host "$($OutboundCalledTransRule.Name) rule has same name, but different details. Creating new rule: $($OutboundCalledTransRule.Name)_$TeamsGateway"
 			$OCTRDetails.Identity = $OutboundCalledTransRule.Name + '_' + $TeamsGateway
 			$null = (New-CsTeamsTranslationRule @OCTRDetails)
 		}
 	}
 	Else {
-		Write-Host "Creating translation rule $($OutboundCalledTransRule.Name"
+		Write-Host "Creating translation rule called $($OutboundCalledTransRule.Name)"
 		$null = (New-CsTeamsTranslationRule @OCTRDetails)
 	}
-	Write-Verbose "Assigning $($OutboundCalledTransRule.Name translation rule to gateway"
+	Write-Verbose "Assigning $($OutboundCalledTransRule.Name) translation rule to gateway"
 	Set-CsOnlinePSTNGateway -Identity $TeamsGateway -OutboundPSTNNumberTranslationRules @{Add=$OCTRDetails.Identity} -verbose
 }
 
