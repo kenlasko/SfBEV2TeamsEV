@@ -20,7 +20,7 @@
 		OPTIONAL. Will not erase existing Teams Enterprise Voice configuration before restoring.
 
 	.PARAMETER OverrideAdminDomain
-		OPTIONAL: The FQDN your Office365 tenant. Use if your admin account is not in the same domain as your tenant (ie. doesn't use a @tenantname.onmicrosoft.com address)
+		OPTIONAL: The FQDN of your Office365 tenant. Use if your admin account is not in the same domain as your tenant (ie. doesn't use a @tenantname.onmicrosoft.com address)
 		
 	.NOTES
 		Version 1.00
