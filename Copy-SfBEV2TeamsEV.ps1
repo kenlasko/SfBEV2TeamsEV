@@ -1,9 +1,9 @@
 <#
 	.SYNOPSIS
-		A script to copy a Skype for Business on-prem Enterprise Voice configuration to a Teams Enterprise Voice configuration.
+		A script to migrate a Skype for Business on-prem Enterprise Voice configuration to a Teams Enterprise Voice configuration.
 
 	.DESCRIPTION
-		A script to automatically copy a Skype for Business on-prem Enterprise Voice configuration to a Teams Enterprise Voice configuration. Will copy the following items:
+		A script to automatically migrate a Skype for Business on-prem Enterprise Voice configuration to a Teams Enterprise Voice configuration. Will copy the following items:
 		- Dialplans and associated normalization rules
 		- Voice routes
 		- Voice policies
@@ -24,7 +24,7 @@
 		
 	.NOTES
 		Version 1.00
-		Build: Feb 06, 2020
+		Build: Feb 09, 2020
 		Copyright © 2020  Ken Lasko
 		klasko@ucdialplans.com
 		https://www.ucdialplans.com
