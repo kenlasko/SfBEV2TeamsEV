@@ -216,6 +216,50 @@ ForEach ($Dialplan in $Dialplans) {
 	}
 }
 
+# Ask to copy a user-level tenant dialplan to Global
+$Confirm = Read-Host -Prompt 'Copy a user-level tenant dialplan to the Global tenant dialplan? (Y/N)?'
+If ($Confirm -match '^[Yy]$') {
+	$ValidSelection = $FALSE
+	$TenantDPList = Get-CsTenantDialPlan | Where {$_.Identity -ne 'Global'}
+	Do {
+		Write-Host 'Please select a tenant dialplan from the below list:'
+		Write-Host
+		Write-Host '#     Teams Tenant Dialplan'
+		Write-Host '=     ====================='
+		For ($i=0; $i -lt $TenantDPList.Count; $i++) {
+			$a = $i + 1
+			Write-Host ($a, $TenantDPList[$i].Identity) -Separator '     '
+		}
+		
+		$Range = '(1-' + $a + ')'
+		Write-Host
+		$Select = Read-Host 'Select a tenant dialplan to copy to Global' $Range
+
+		If (($Select -gt $a) -or ($Select -lt 1)) {
+			Write-Host 'Invalid selection' -ForegroundColor Red
+			$ValidSelection = $FALSE
+		}
+		Else {
+			Write-Host "Copying $($TenantDPList[$Select-1].Identity) to tenant Global dialplan"
+			
+			$DPDetails = @{
+				Identity = 'Global'
+				OptimizeDeviceDialing = $TenantDPList[$Select-1].OptimizeDeviceDialing
+				Description = $TenantDPList[$Select-1].Description
+				NormalizationRules = $TenantDPList[$Select-1].NormalizationRules
+			}
+			
+			# Only include the external access prefix if one is defined. MS throws an error if you pass a null/empty ExternalAccessPrefix
+			If ($TenantDPList[$Select-1].ExternalAccessPrefix) {
+				$DPDetails.Add('ExternalAccessPrefix', $TenantDPList[$Select-1].ExternalAccessPrefix)
+			}
+			
+			Set-CsTenantDialplan @DPDetails
+			$ValidSelection = $TRUE
+		}
+	} Until ($ValidSelection -eq $TRUE)	
+}
+
 # Copy PSTN usages from SfB on-prem to MS Teams
 Write-Host -Object 'Copying PSTN usages from SfB on-prem to Teams'
 
