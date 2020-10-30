@@ -211,8 +211,23 @@ ForEach ($Dialplan in $Dialplans) {
 		Identity = $value -replace "^Site\:", "" # Since site-level dialplans aren't supported in Teams, site-level dialplans will be converted to user-level dialplans
 		OptimizeDeviceDialing = $Dialplan.OptimizeDeviceDialing
 		Description = $Dialplan.Description
-		NormalizationRules = $Dialplan.NormalizationRules
 	}
+	
+	# Create normrules in memory and add to a list
+	$NRList = @()
+
+	ForEach ($NormRule in $Dialplan.NormalizationRules) {
+		# Convert to hashtable
+		$Hash = @{}
+		$NormRule.psobject.properties | Foreach { $Hash[$_.Name] = $_.Value }
+
+		# Remove element and add Parent as required
+		$Hash.Remove('Element')
+		$Hash.Add('Parent','Global')
+		
+		# Add each rule to the list
+		$NRList += New-CsVoiceNormalizationRule @Hash -InMemory
+	}	
 
 	# Only include the external access prefix if one is defined. MS throws an error if you pass a null/empty ExternalAccessPrefix
 	If ($Dialplan.ExternalAccessPrefix) {
@@ -220,10 +235,10 @@ ForEach ($Dialplan in $Dialplans) {
 	}
 
 	If ($DPExists) {
-		$null = (Set-CsTenantDialPlan @DPDetails)
+		$null = (Set-CsTenantDialPlan @DPDetails -NormalizationRules @{Add=$NRList})
 	}
 	Else {
-		$null = (New-CsTenantDialPlan @DPDetails)
+		$null = (New-CsTenantDialPlan @DPDetails -NormalizationRules @{Add=$NRList})
 	}
 }
 
