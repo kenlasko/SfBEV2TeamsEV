@@ -22,6 +22,9 @@
 	.PARAMETER OverrideAdminDomain
 		OPTIONAL: The FQDN of your Office365 tenant. Use if your admin account is not in the same domain as your tenant (ie. doesn't use a @tenantname.onmicrosoft.com address)
 		
+	.PARAMETER RenamePolicies
+		OPTIONAL: The script will prompt you to rename each policy before it uploads to Microsoft 365, great if your have weird policy names like "OCS Dialplan" 
+
 	.NOTES
 		Version 1.00
 		Build: Feb 09, 2020
@@ -36,7 +39,9 @@ param (
 	[switch]
 	$KeepExisting,
 	[string]
-	$OverrideAdminDomain
+	$OverrideAdminDomain,
+	[switch]
+	$RenamePolcies
 )
 
 # Make sure there isn't an active PSSession to O365, because the O365 Get-CsDialplan command overrides the on-prem one
@@ -193,11 +198,17 @@ If (!$KeepExisting) {
 
 Write-Host -Object 'Copying dialplans from SfB on-prem to Teams'
 ForEach ($Dialplan in $Dialplans) {
+	If ($RenamePolcies){ #Allows the user to rename the policy during the import
+		Write-Host "Existing Skype for Business Dial Plan Name is $($Dialplan.Identity)"
+		Write-Host 'Enter a new Policy name or press enter to accept the existing name'
+		if (!($value = Read-Host "Name [$($Dialplan.Identity)]")) { $value = $($Dialplan.Identity) } #prompts the user for a new policy name, defaults to the existing name if there is no input
+	}
+
 	Write-Verbose "Copying $($Dialplan.Identity) dialplan"
-	$DPExists = (Get-CsTenantDialPlan -Identity $Dialplan.Identity -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Identity)
+	$DPExists = (Get-CsTenantDialPlan -Identity $value -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Identity)
 
 	$DPDetails = @{
-		Identity = $Dialplan.Identity -replace "^Site\:", "" # Since site-level dialplans aren't supported in Teams, site-level dialplans will be converted to user-level dialplans
+		Identity = $value -replace "^Site\:", "" # Since site-level dialplans aren't supported in Teams, site-level dialplans will be converted to user-level dialplans
 		OptimizeDeviceDialing = $Dialplan.OptimizeDeviceDialing
 		Description = $Dialplan.Description
 		NormalizationRules = $Dialplan.NormalizationRules
@@ -272,8 +283,14 @@ ForEach ($PSTNUsage in $PSTNUsages) {
 Write-Host -Object 'Copying voice routes from SfB on-prem to Teams'
 
 ForEach ($VoiceRoute in $VoiceRoutes) {
+	If ($RenamePolcies){ #Allows the user to rename the policy during the import
+		Write-Host "Existing Skype for Business Voice Route Name is $($VoiceRoute.Identity)"
+		Write-Host 'Enter a new Policy name or press enter to accept the existing name'
+		if (!($value = Read-Host "Name [$($VoiceRoute.Identity)]")) { $value = $($VoiceRoute.Identity) } #prompts the user for a new policy name, defaults to the existing name if there is no input
+	}
+
 	Write-Verbose "Copying $($VoiceRoute.Identity) voice route"
-	$VRExists = (Get-CsOnlineVoiceRoute -Identity $VoiceRoute.Identity -ErrorAction SilentlyContinue).Identity
+	$VRExists = (Get-CsOnlineVoiceRoute -Identity $value -ErrorAction SilentlyContinue).Identity
 
 	# Replace SfB gateways with the equivalent Teams gateways
 	$TeamsGatewayList = @()
@@ -286,7 +303,7 @@ ForEach ($VoiceRoute in $VoiceRoutes) {
 	}
 
 	$VRDetails = @{
-		Identity = $VoiceRoute.Identity
+		Identity = $value
 		NumberPattern = $VoiceRoute.NumberPattern
 		Priority = $VoiceRoute.Priority
 		OnlinePstnUsages = $VoiceRoute.PstnUsages
@@ -310,11 +327,17 @@ ForEach ($VoiceRoute in $VoiceRoutes) {
 Write-Host -Object 'Copying SfB voice policies to Teams voice routing policies'
 
 ForEach ($VoicePolicy in $VoicePolicies) {
+	If ($RenamePolcies){ #Allows the user to rename the policy during the import
+		Write-Host "Existing Skype for Business Voice Policy Name is $($VoicePolicy.Identity)"
+		Write-Host 'Enter a new Policy name or press enter to accept the existing name'
+		if (!($value = Read-Host "Name [$($VoicePolicy.Identity)]")) { $value = $($VoicePolicy.Identity) } #prompts the user for a new policy name, defaults to the existing name if there is no input
+	}
+
 	Write-Verbose "Copying $($VoicePolicy.Identity) voice policy"
 	$VPExists = (Get-CsOnlineVoiceRoutingPolicy -Identity $VoicePolicy.Identity -ErrorAction SilentlyContinue).Identity
 
 	$VPDetails = @{
-		Identity = $VoicePolicy.Identity -replace "^Site\:", "" # Since site-level voice policies aren't supported in Teams, site-level SfB voice policies will be converted to user-level Teams voice routing policies
+		Identity = $value -replace "^Site\:", "" # Since site-level voice policies aren't supported in Teams, site-level SfB voice policies will be converted to user-level Teams voice routing policies
 		OnlinePstnUsages = $VoicePolicy.PstnUsages
 		Description = $VoicePolicy.Description
 	}
