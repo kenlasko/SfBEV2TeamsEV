@@ -41,7 +41,7 @@ param (
 	[string]
 	$OverrideAdminDomain,
 	[switch]
-	$RenamePolcies
+	$RenamePolicies
 )
 
 # Make sure there isn't an active PSSession to O365, because the O365 Get-CsDialplan command overrides the on-prem one
@@ -198,7 +198,7 @@ If (!$KeepExisting) {
 
 Write-Host -Object 'Copying dialplans from SfB on-prem to Teams'
 ForEach ($Dialplan in $Dialplans) {
-	If ($RenamePolcies){ #Allows the user to rename the policy during the import
+	If ($RenamePolicies){ #Allows the user to rename the policy during the import
 		Write-Host "Existing Skype for Business Dial Plan Name is $($Dialplan.Identity)"
 		Write-Host 'Enter a new Policy name or press ENTER to accept the existing name'
 		if (!($value = Read-Host "Name [$($Dialplan.Identity)]")) { $value = $($Dialplan.Identity) } #prompts the user for a new policy name, defaults to the existing name if there is no input
@@ -283,7 +283,7 @@ ForEach ($PSTNUsage in $PSTNUsages) {
 Write-Host -Object 'Copying voice routes from SfB on-prem to Teams'
 
 ForEach ($VoiceRoute in $VoiceRoutes) {
-	If ($RenamePolcies){ #Allows the user to rename the policy during the import
+	If ($RenamePolicies){ #Allows the user to rename the policy during the import
 		Write-Host "Existing Skype for Business Voice Route Name is $($VoiceRoute.Identity)"
 		Write-Host 'Enter a new Policy name or press ENTER to accept the existing name'
 		if (!($value = Read-Host "Name [$($VoiceRoute.Identity)]")) { $value = $($VoiceRoute.Identity) } #prompts the user for a new policy name, defaults to the existing name if there is no input
@@ -327,7 +327,7 @@ ForEach ($VoiceRoute in $VoiceRoutes) {
 Write-Host -Object 'Copying SfB voice policies to Teams voice routing policies'
 
 ForEach ($VoicePolicy in $VoicePolicies) {
-	If ($RenamePolcies){ #Allows the user to rename the policy during the import
+	If ($RenamePolicies){ #Allows the user to rename the policy during the import
 		Write-Host "Existing Skype for Business Voice Policy Name is $($VoicePolicy.Identity)"
 		Write-Host 'Enter a new Policy name or press ENTER to accept the existing name'
 		if (!($value = Read-Host "Name [$($VoicePolicy.Identity)]")) { $value = $($VoicePolicy.Identity) } #prompts the user for a new policy name, defaults to the existing name if there is no input
